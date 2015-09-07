@@ -20,6 +20,18 @@ div {
   margin-top: 2em;
 }
 
+.settings {
+  bottom: 0.5em;
+  font-size: smaller;
+  position: absolute;
+  width: 100%;
+}
+
+.warnings {
+  color: #CC0000;
+  font-weight: 700;
+}
+
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
   <script>
@@ -30,6 +42,9 @@ div {
   }
 
   var app = angular.module('app', []).controller('Ctrl', function ($scope) {
+    $scope.showSettings = false;
+    $scope.playerColor = "#FFFFFF";
+
     $scope.$watch("map", function(nv) {
       $scope.data = maps[nv]
     });
@@ -40,18 +55,20 @@ div {
     });
 
     $scope.map = "US";
-    $scope.orig = 0;
+    $scope.orig = -1;
     $scope.dest = 0;
     $scope.payoff = 0;
     $scope.$watchGroup(["orig", "dest"], function(nv) {
-      $scope.payoff = $scope.data.payoff[nv[0]][nv[1]];
+      if ($scope.orig < 0 || $scope.dest < 0) {
+        $scope.payoff = "n/a";
+      } else {
+        $scope.payoff = $scope.data.payoff[nv[0]][nv[1]];
+      }
     });
 
     $scope.doRoll = function() {
       $scope.orig = $scope.dest;
-      while ($scope.orig == $scope.dest) {
-        $scope.dest = Math.floor(Math.random() * $scope.cities.length);
-      }
+      $scope.dest = Math.floor(Math.random() * $scope.cities.length);
     };
 
     $scope.convertToInt = function(id){
@@ -60,18 +77,33 @@ div {
 
     $scope.swapMap = function() {
       $scope.map = ($scope.map == "US") ? "GB" : "US";
-      $scope.orig = 0;
+      $scope.orig = -1;
       $scope.dest = 0;
     }
   });
   </script>
 </head>
-<body ng-controller="Ctrl">
+<body ng-controller="Ctrl" ng-style="{background_color: playerColor}">
   Boxcars - Payoff Chart - <a ng-click="swapMap()">{{map}}</a>
 
-  <div class="roller">
-    <button ng-click="doRoll()">random!</button>
+  <div class="settings">
+    <div ng-show="!showSettings">
+      <span ng-click="showSettings = !showSettings">settings</span>
+    </div>
+    <div ng-show="showSettings">
+      player:
+      <select ng-model="playerColor">
+        <option value="#DDFFDD">green</option>
+        <option value="#FFDDDD">red</option>
+        <option value="#FFFFDD">yellow</option>
+        <option value="#DDDDFF">blue</option>
+        <option value="#FFFFFF">white</option>
+        <option value="#AAAAAA">black</option>
+      </select>
+      <div ng-click="showSettings = !showSettings">hide</div>
+    </div>
   </div>
+
   <div>
     origin:
     <select ng-model="orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
@@ -82,6 +114,16 @@ div {
   </div>
   <div class="payoff">
     payoff: {{payoff}}
+  </div>
+
+  <div class="warnings">
+      <div ng-show="orig==dest">
+        Same city rolled... loose turn. :/
+      </div>
+  </div>
+
+  <div class="roller">
+    <button ng-click="doRoll()">new destination!</button>
   </div>
 </body>
 </html>
