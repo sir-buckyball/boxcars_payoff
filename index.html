@@ -479,34 +479,40 @@ div {
     }
   }
 
-  var app = angular.module('app', []).controller('Ctrl', function ($scope) {
+  var app = angular.module('app', []);
+  app.controller('Ctrl', function ($scope, $location) {
     $scope.showSettings = false;
     $scope.playerColor = "#FFFFFF";
     $scope.showRegionPicker = false;
 
-    $scope.$watch("map", function(nv) {
-      $scope.data = maps[nv]
+    $scope.$watchGroup(["map", "orig", "dest"], function(nv) {
+      // Reasonable defaults
+      nv[0] = (nv[0] === undefined) ? "US" : nv[0];
+      nv[1] = (nv[1] === undefined) ? -1 : +nv[1];
+      nv[2] = (nv[2] === undefined) ? -1 : +nv[2];
 
-      $scope.orig = -1;
-      $scope.dest = -1;
-      $scope.nextDest();
-    });
+      // Update map-related variables.
+      $scope.data = maps[nv[0]]
+      $scope.cities = $scope.data.cities;
+      $scope.regions = $scope.data.regions;
 
-    $scope.$watch("data", function(nv) {
-      $scope.cities = nv.cities;
-      $scope.payoff_matrix = nv.payoff_matrix;
-    });
-
-    $scope.$watchGroup(["orig", "dest"], function(nv) {
       // Update regions to match user selection.
-      $scope.origRegion = $scope.data.city_regions[nv[0]];
-      $scope.destRegion = $scope.data.city_regions[nv[1]];
+      $scope.origRegion = $scope.data.city_regions[nv[1]];
+      $scope.destRegion = $scope.data.city_regions[nv[2]];
 
+      // Update the payoff.
       if ($scope.orig < 0 || $scope.dest < 0) {
         $scope.payoff = "n/a";
       } else {
-        $scope.payoff = $scope.data.payoff[nv[0]][nv[1]];
+        $scope.payoff = $scope.data.payoff[nv[1]][nv[2]];
       }
+
+      // Update the location history.
+      $location.search({
+        map: nv[0],
+        orig: nv[1],
+        dest: nv[2],
+      });
     });
 
     // Rolls 3 dice, 1 d2 and 2 d6.
@@ -552,10 +558,17 @@ div {
     $scope.swapMap = function() {
       $scope.map = ($scope.map == "US") ? "GB" : "US";
       $scope.orig = -1;
-      $scope.dest = 0;
+      $scope.dest = -1;
     }
 
-    $scope.map = "US";
+    var doInit = function() {
+      var s = $location.search();
+      $scope.map = s.map || "US";
+      $scope.orig = (s.orig === undefined) ? -1 : +s.orig;
+      $scope.dest = (s.dest === undefined) ? -1 : +s.dest;
+    };
+    $scope.$on("$locationChangeSuccess", doInit);
+    doInit();
   });
   </script>
 </head>
@@ -582,26 +595,26 @@ div {
 
   <div class="region-selector" ng-show="showRegionPicker">
     <p>Since you were already in {{data.regions[origRegion]}}, you may pick any region for your next destination!</p>
-    <button ng-repeat="region in data.regions" ng-click="randomCityInRegion($index)">{{region}}</button>
+    <button ng-repeat="region in regions" ng-click="randomCityInRegion($index)">{{region}}</button>
   </div>
 
   <div ng-hide="showRegionPicker">
     <div>
       origin:
       <select ng-model="orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-      <span ng-show="origRegion !== undefined">({{data.regions[origRegion]}})</span>
+      <span ng-show="origRegion !== undefined">({{regions[origRegion]}})</span>
     </div>
     <div>
       destination:
       <select ng-model="dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-      <span ng-show="destRegion !=== undefined">({{data.regions[destRegion]}})</span>
+      <span ng-show="destRegion !== undefined">({{regions[destRegion]}})</span>
     </div>
     <div class="payoff" ng-hide="orig==dest">
       payoff: {{payoff}}
     </div>
 
     <div class="warnings">
-        <div ng-show="orig==dest">
+        <div ng-show="orig==dest && orig >= 0">
           Same city rolled... loose turn. :/
         </div>
     </div>
