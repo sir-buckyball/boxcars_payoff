@@ -32,6 +32,13 @@ div {
   font-weight: 700;
 }
 
+.region-selector button {
+  margin: 0.5em;
+}
+.region-selector p {
+  color: #007F00;
+}
+
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
   <script>
@@ -475,6 +482,7 @@ div {
   var app = angular.module('app', []).controller('Ctrl', function ($scope) {
     $scope.showSettings = false;
     $scope.playerColor = "#FFFFFF";
+    $scope.showRegionPicker = false;
 
     $scope.$watch("map", function(nv) {
       $scope.data = maps[nv]
@@ -520,14 +528,21 @@ div {
       $scope.destRegion = $scope.data.region_rollchart[r[0]][r[1] + r[2]];
       console.log("rolled region: " + $scope.data.regions[$scope.destRegion]);
 
-      // TODO(clayb): if the destination region matches the origin region, the
-      // player is allowed to select an alternate region (and avoid risking
-      // turn loss.
+      // If the destination region matches the origin region, the player is
+      // allowed to select an alternate region (and avoid risking turn loss.
+      if ($scope.origRegion == $scope.destRegion) {
+        $scope.showRegionPicker = true;
+      } else {
+        $scope.randomCityInRegion($scope.destRegion);
+      }
+    }
 
+    $scope.randomCityInRegion = function(region) {
       // Roll for a city.
       r = rollDice();
-      $scope.dest = $scope.data.city_rollchart[$scope.destRegion][r[0]][r[1] + r[2]];
+      $scope.dest = $scope.data.city_rollchart[region][r[0]][r[1] + r[2]];
       console.log("rolled city: " + $scope.data.cities[$scope.dest]);
+      $scope.showRegionPicker = false;
     }
 
     $scope.convertToInt = function(id){
@@ -561,32 +576,39 @@ div {
         <option value="#FFFFFF">white</option>
         <option value="#AAAAAA">black</option>
       </select>
-      <div ng-click="showSettings = !showSettings">hide</div>
+      <div ng-click="showSettings = !showSettings">hide settings</div>
     </div>
   </div>
 
-  <div>
-    origin:
-    <select ng-model="orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-    ({{data.regions[origRegion]}})
-  </div>
-  <div>
-    destination:
-    <select ng-model="dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-    ({{data.regions[destRegion]}})
-  </div>
-  <div class="payoff">
-    payoff: {{payoff}}
+  <div class="region-selector" ng-show="showRegionPicker">
+    <p>Since you were already in {{data.regions[origRegion]}}, you may pick any region for your next destination!</p>
+    <button ng-repeat="region in data.regions" ng-click="randomCityInRegion($index)">{{region}}</button>
   </div>
 
-  <div class="warnings">
-      <div ng-show="orig==dest">
-        Same city rolled... loose turn. :/
-      </div>
-  </div>
+  <div ng-hide="showRegionPicker">
+    <div>
+      origin:
+      <select ng-model="orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+      <span ng-show="origRegion !== undefined">({{data.regions[origRegion]}})</span>
+    </div>
+    <div>
+      destination:
+      <select ng-model="dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+      <span ng-show="destRegion !=== undefined">({{data.regions[destRegion]}})</span>
+    </div>
+    <div class="payoff" ng-hide="orig==dest">
+      payoff: {{payoff}}
+    </div>
 
-  <div class="roller">
-    <button ng-click="nextDest()">new destination!</button>
+    <div class="warnings">
+        <div ng-show="orig==dest">
+          Same city rolled... loose turn. :/
+        </div>
+    </div>
+
+    <div class="roller">
+      <button ng-click="nextDest()">next destination!</button>
+    </div>
   </div>
 </body>
 </html>
