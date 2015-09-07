@@ -309,10 +309,8 @@ div {
         "West Country",
         "White Rose Country",
       ],
-      "region_rollchart":[
-        [8,8,1,8,0,1,7,2,5,5,5],
-        [9,9,6,6,9,3,4,3,4,0,7],
-      ],
+      "city_regions":[5,7,1,7,8,4,0,9,3,4,7,5,3,8,7,8,1,8,7,0,1,7,4,1,0,3,4,5,9,3,9,1,6,5,6,8,5,5,6,8,9,1,6,1,3,0,9,5,0,5,6,0,5,4,9,3,3,4,7,2,5,4,5,9,7,0,3,5,1,8,6,8,6,0,8,1,1,3,8,9,9,3,1,0,3,6,6,3,7,8,4,1,8,4,5,1,3,7,0,9],
+      "region_rollchart":[[8,8,1,8,0,1,7,2,5,5,5],[9,9,6,6,9,3,4,3,4,0,7]],
       "city_rollchart":[
         [[83,83,73,45,73,45,65,51,51,65,65],[98,98,98,19,19,6,6,48,24,48,24]],
         [[41,95,95,41,68,82,75,76,91,75,76],[2,31,20,31,2,16,23,23,43,43,20]],
@@ -480,6 +478,10 @@ div {
 
     $scope.$watch("map", function(nv) {
       $scope.data = maps[nv]
+
+      $scope.orig = -1;
+      $scope.dest = -1;
+      $scope.nextDest();
     });
 
     $scope.$watch("data", function(nv) {
@@ -487,11 +489,11 @@ div {
       $scope.payoff_matrix = nv.payoff_matrix;
     });
 
-    $scope.map = "US";
-    $scope.orig = -1;
-    $scope.dest = 0;
-    $scope.payoff = 0;
     $scope.$watchGroup(["orig", "dest"], function(nv) {
+      // Update regions to match user selection.
+      $scope.origRegion = $scope.data.city_regions[nv[0]];
+      $scope.destRegion = $scope.data.city_regions[nv[1]];
+
       if ($scope.orig < 0 || $scope.dest < 0) {
         $scope.payoff = "n/a";
       } else {
@@ -511,6 +513,7 @@ div {
 
     $scope.nextDest = function() {
       $scope.orig = $scope.dest;
+      $scope.origRegion = $scope.destRegion;
 
       // Roll for a region.
       var r = rollDice();
@@ -536,6 +539,8 @@ div {
       $scope.orig = -1;
       $scope.dest = 0;
     }
+
+    $scope.map = "US";
   });
   </script>
 </head>
@@ -563,10 +568,12 @@ div {
   <div>
     origin:
     <select ng-model="orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+    ({{data.regions[origRegion]}})
   </div>
   <div>
     destination:
     <select ng-model="dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+    ({{data.regions[destRegion]}})
   </div>
   <div class="payoff">
     payoff: {{payoff}}
