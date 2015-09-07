@@ -596,7 +596,7 @@ div {
       <select ng-model="dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
       <span ng-show="destRegion !=== undefined">({{data.regions[destRegion]}})</span>
     </div>
-    <div class="payoff">
+    <div class="payoff" ng-hide="orig==dest">
       payoff: {{payoff}}
     </div>
 
