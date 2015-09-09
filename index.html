@@ -485,11 +485,12 @@ div {
     $scope.playerColor = "#FFFFFF";
     $scope.showRegionPicker = false;
 
-    $scope.$watchGroup(["map", "orig", "dest"], function(nv) {
+    $scope.$watchGroup(["map", "orig", "dest", "playerColor"], function(nv) {
       // Reasonable defaults
       nv[0] = (nv[0] === undefined) ? "US" : nv[0];
       nv[1] = (nv[1] === undefined) ? -1 : +nv[1];
       nv[2] = (nv[2] === undefined) ? -1 : +nv[2];
+      nv[3] = (nv[3] === undefined) ? "white" : nv[3];
 
       // Update map-related variables.
       $scope.data = maps[nv[0]]
@@ -512,6 +513,7 @@ div {
         map: nv[0],
         orig: nv[1],
         dest: nv[2],
+        color: nv[3],
       });
     });
 
@@ -566,6 +568,7 @@ div {
       $scope.map = s.map || "US";
       $scope.orig = (s.orig === undefined) ? -1 : +s.orig;
       $scope.dest = (s.dest === undefined) ? -1 : +s.dest;
+      $scope.playerColor = (s.color === undefined) ? "white" : s.color;
     };
     $scope.$on("$locationChangeSuccess", doInit);
     doInit();
@@ -582,12 +585,12 @@ div {
     <div ng-show="showSettings">
       player:
       <select ng-model="playerColor">
-        <option value="#DDFFDD">green</option>
-        <option value="#FFDDDD">red</option>
-        <option value="#FFFFDD">yellow</option>
-        <option value="#DDDDFF">blue</option>
-        <option value="#FFFFFF">white</option>
-        <option value="#AAAAAA">black</option>
+        <option value="lightgreen">green</option>
+        <option value="pink">red</option>
+        <option value="lightyellow">yellow</option>
+        <option value="lightblue">blue</option>
+        <option value="white">white</option>
+        <option value="lightgray">black</option>
       </select>
       <div ng-click="showSettings = !showSettings">hide settings</div>
     </div>
