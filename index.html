@@ -485,35 +485,38 @@ div {
     $scope.playerColor = "#FFFFFF";
     $scope.showRegionPicker = false;
 
-    $scope.$watchGroup(["map", "orig", "dest", "playerColor"], function(nv) {
+    $scope.$watchGroup(["map", "home", "orig", "dest", "playerColor"], function(nv) {
       // Reasonable defaults
-      nv[0] = (nv[0] === undefined) ? "US" : nv[0];
-      nv[1] = (nv[1] === undefined) ? -1 : +nv[1];
-      nv[2] = (nv[2] === undefined) ? -1 : +nv[2];
-      nv[3] = (nv[3] === undefined) ? "white" : nv[3];
+      var map   = nv[0] = (nv[0] === undefined) ? "US" : nv[0];
+      var home  = nv[1] = (nv[1] === undefined) ? -1 : +nv[1];
+      var orig  = nv[2] = (nv[2] === undefined) ? -1 : +nv[2];
+      var dest  = nv[3] = (nv[3] === undefined) ? -1 : +nv[3];
+      var color = nv[4] = (nv[4] === undefined) ? "white" : nv[4];
 
       // Update map-related variables.
-      $scope.data = maps[nv[0]]
+      $scope.data = maps[map]
       $scope.cities = $scope.data.cities;
       $scope.regions = $scope.data.regions;
 
       // Update regions to match user selection.
-      $scope.origRegion = $scope.data.city_regions[nv[1]];
-      $scope.destRegion = $scope.data.city_regions[nv[2]];
+      $scope.homeRegion = $scope.data.city_regions[home];
+      $scope.origRegion = $scope.data.city_regions[orig];
+      $scope.destRegion = $scope.data.city_regions[dest];
 
       // Update the payoff.
       if ($scope.orig < 0 || $scope.dest < 0) {
         $scope.payoff = "n/a";
       } else {
-        $scope.payoff = $scope.data.payoff[nv[1]][nv[2]];
+        $scope.payoff = $scope.data.payoff[orig][dest];
       }
 
       // Update the location history.
       $location.search({
-        map: nv[0],
-        orig: nv[1],
-        dest: nv[2],
-        color: nv[3],
+        map: map,
+        home: home,
+        orig: orig,
+        dest: dest,
+        color: color,
       });
     });
 
@@ -594,6 +597,12 @@ div {
       </select>
       <div ng-click="showSettings = !showSettings">hide settings</div>
     </div>
+  </div>
+
+  <div>
+    home city:
+    <select ng-model="home" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+    <span ng-show="homeRegion !== undefined">({{regions[homeRegion]}})</span>
   </div>
 
   <div class="region-selector" ng-show="showRegionPicker">
