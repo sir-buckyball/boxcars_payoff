@@ -569,6 +569,7 @@ div {
     var doInit = function() {
       var s = $location.search();
       $scope.map = s.map || "US";
+      $scope.home = (s.home === undefined) ? -1 : +s.home;
       $scope.orig = (s.orig === undefined) ? -1 : +s.orig;
       $scope.dest = (s.dest === undefined) ? -1 : +s.dest;
       $scope.playerColor = (s.color === undefined) ? "white" : s.color;
