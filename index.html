@@ -487,8 +487,6 @@ div {
   app.controller('Ctrl', function ($scope, $location) {
     $scope.numPlayers = 1;
     $scope.showSettings = false;
-    // $scope.playerColor = "#FFFFFF";
-    $scope.showRegionPicker = false;
     $scope.players = []
 
     /**
@@ -645,9 +643,12 @@ div {
       $scope.numPlayers = Math.max(1, $scope.players.length);
       $scope.updateNumPlayers();
     };
-    // $scope.$on("$locationChangeSuccess", doInit);
     doInit();
   });
+
+  /**
+   * Allow representing models directly as numbers, not strings.
+   */
   app.directive('convertToNumber', function() {
     return {
       require: 'ngModel',
@@ -674,13 +675,8 @@ div {
     </div>
     <div ng-show="showSettings">
       num players:
-      <select ng-model="numPlayers" convert-to-number>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-      </select>
+      <select ng-model="numPlayers" ng-options="num for num in [1, 2, 3, 4, 5]"></select>
+
       <br/>
 
       <div ng-repeat="player in players">
