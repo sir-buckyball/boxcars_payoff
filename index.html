@@ -39,8 +39,12 @@ div {
   color: #007F00;
 }
 
+.centered {
+  margin: 0% 10%;
+}
+
   </style>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.js"></script>
   <script>
 
   maps = {
@@ -481,44 +485,103 @@ div {
 
   var app = angular.module('app', []);
   app.controller('Ctrl', function ($scope, $location) {
+    $scope.numPlayers = 1;
     $scope.showSettings = false;
-    $scope.playerColor = "#FFFFFF";
+    // $scope.playerColor = "#FFFFFF";
     $scope.showRegionPicker = false;
+    $scope.players = []
 
-    $scope.$watchGroup(["map", "home", "orig", "dest", "playerColor"], function(nv) {
-      // Reasonable defaults
-      var map   = nv[0] = (nv[0] === undefined) ? "US" : nv[0];
-      var home  = nv[1] = (nv[1] === undefined) ? -1 : +nv[1];
-      var orig  = nv[2] = (nv[2] === undefined) ? -1 : +nv[2];
-      var dest  = nv[3] = (nv[3] === undefined) ? -1 : +nv[3];
-      var color = nv[4] = (nv[4] === undefined) ? "white" : nv[4];
-
-      // Update map-related variables.
-      $scope.data = maps[map]
+    /**
+     * Watch for map changes.
+     */
+    $scope.$watch("map", function(map) {
+      map = (map === undefined) ? "US" : map;
+      $scope.data = maps[map];
       $scope.cities = $scope.data.cities;
       $scope.regions = $scope.data.regions;
 
-      // Update regions to match user selection.
-      $scope.homeRegion = $scope.data.city_regions[home];
-      $scope.origRegion = $scope.data.city_regions[orig];
-      $scope.destRegion = $scope.data.city_regions[dest];
+      // Update all of the player data for the new map
+      $scope.updatePlayers();
 
-      // Update the payoff.
-      if ($scope.orig < 0 || $scope.dest < 0) {
-        $scope.payoff = "n/a";
-      } else {
-        $scope.payoff = $scope.data.payoff[orig][dest];
+      // Update the location history
+      $location.search("map", map);
+    });
+
+    /**
+     * Watch for player city changes.
+     */
+    $scope.$watch("players", function(players) {
+      $scope.updatePlayers();
+    }, true);
+
+    $scope.updatePlayers = function(players) {
+      // Update regions and payoffs.
+      for (var i = 0; i < $scope.numPlayers; i++) {
+        var player = $scope.players[i];
+        player.homeRegion = $scope.data.city_regions[player.home];
+        player.origRegion = $scope.data.city_regions[player.orig];
+        player.destRegion = $scope.data.city_regions[player.dest];
+
+        if (player.orig < 0 || player.dest < 0) {
+          player.payoff = "n/a";
+        } else {
+          player.payoff = $scope.data.payoff[player.orig][player.dest];
+        }
       }
 
-      // Update the location history.
-      $location.search({
-        map: map,
-        home: home,
-        orig: orig,
-        dest: dest,
-        color: color,
-      });
+      // Update the location history
+      $location.search("players", JSON.stringify($scope.players));
+    };
+
+    /**
+     * Watch for numPlayers changes.
+     */
+    $scope.$watch("numPlayers", function(numPlayers) {
+      $scope.updateNumPlayers();
     });
+
+    $scope.updateNumPlayers = function() {
+      var numPlayers = ($scope.numPlayers === undefined) ? 1 : +$scope.numPlayers;
+
+      // Add or remove players.
+      var playerDelta = numPlayers - $scope.players.length;
+      if (playerDelta > 0) {
+        var colorChoices = remainingColors($scope.players);
+        for (var i = 0; i < playerDelta; i++) {
+          $scope.players.push({
+            home: -1,
+            orig: -1,
+            dest: -1,
+            color: colorChoices[i],
+            payoff: "n/a",
+          });
+        }
+      } else {
+        for (var i = 0; i > playerDelta; i--) {
+          $scope.players.pop();
+        }
+      }
+    };
+
+    /**
+     * Human name --> CSS name
+     */
+    $scope.colors = {
+      "lightgreen": "green",
+      "pink": "red",
+      "lightyellow": "yellow",
+      "lightblue": "blue",
+      "white": "white",
+      "lightgrey": "black",
+    };
+
+    var remainingColors = function(playerList) {
+      return Object.keys($scope.colors).filter(function(color) {
+        return !$scope.players.some(function(player) {
+          return player.color === color;
+        })
+      })
+    };
 
     // Rolls 3 dice, 1 d2 and 2 d6.
     // NOTE: These rolls start at 0, not 1.
@@ -530,30 +593,34 @@ div {
       ];
     };
 
-    $scope.nextDest = function() {
-      $scope.orig = $scope.dest;
-      $scope.origRegion = $scope.destRegion;
+    $scope.nextDest = function(player, region) {
+      player.orig = player.dest;
+      player.origRegion = player.destRegion;
 
-      // Roll for a region.
-      var r = rollDice();
-      $scope.destRegion = $scope.data.region_rollchart[r[0]][r[1] + r[2]];
-      console.log("rolled region: " + $scope.data.regions[$scope.destRegion]);
+      if (region === undefined) {
+        // Roll for a region.
+        var r = rollDice();
+        player.destRegion = $scope.data.region_rollchart[r[0]][r[1] + r[2]];
+        console.log("rolled region: " + $scope.data.regions[player.destRegion]);
+      } else {
+        player.destRegion = region;
+        console.log("player chose region: " + $scope.data.regions[player.destRegion]);
+      }
 
       // If the destination region matches the origin region, the player is
       // allowed to select an alternate region (and avoid risking turn loss.
-      if ($scope.origRegion == $scope.destRegion) {
-        $scope.showRegionPicker = true;
+      if (player.origRegion == player.destRegion) {
+        player.showRegionPicker = true;
       } else {
-        $scope.randomCityInRegion($scope.destRegion);
+        player.dest = $scope.randomCityInRegion(player.destRegion);
+        console.log("rolled city: " + $scope.data.cities[player.dest]);
+        player.showRegionPicker = false;
       }
     }
 
     $scope.randomCityInRegion = function(region) {
-      // Roll for a city.
       r = rollDice();
-      $scope.dest = $scope.data.city_rollchart[region][r[0]][r[1] + r[2]];
-      console.log("rolled city: " + $scope.data.cities[$scope.dest]);
-      $scope.showRegionPicker = false;
+      return $scope.data.city_rollchart[region][r[0]][r[1] + r[2]];
     }
 
     $scope.convertToInt = function(id){
@@ -569,71 +636,97 @@ div {
     var doInit = function() {
       var s = $location.search();
       $scope.map = s.map || "US";
-      $scope.home = (s.home === undefined) ? -1 : +s.home;
-      $scope.orig = (s.orig === undefined) ? -1 : +s.orig;
-      $scope.dest = (s.dest === undefined) ? -1 : +s.dest;
-      $scope.playerColor = (s.color === undefined) ? "white" : s.color;
+      try {
+        $scope.players = JSON.parse(s.players);
+      } catch (e) {
+        $scope.players = [];
+      }
+      // There should always be at least one player
+      $scope.numPlayers = Math.max(1, $scope.players.length);
+      $scope.updateNumPlayers();
     };
-    $scope.$on("$locationChangeSuccess", doInit);
+    // $scope.$on("$locationChangeSuccess", doInit);
     doInit();
+  });
+  app.directive('convertToNumber', function() {
+    return {
+      require: 'ngModel',
+      link: function(scope, element, attrs, ngModel) {
+        ngModel.$parsers.push(function(val) {
+          return parseInt(val, 10);
+        });
+        ngModel.$formatters.push(function(val) {
+          return '' + val;
+        });
+      }
+    };
   });
   </script>
 </head>
-<body ng-controller="Ctrl" ng-style="{background_color: playerColor}">
-  Boxcars - Payoff Chart - <a ng-click="swapMap()">{{map}}</a>
+<body ng-controller="Ctrl">
+  <div style="display:block;">
+    Boxcars - Payoff Chart - <a ng-click="swapMap()">{{map}}</a>
+  </div>
 
   <div class="settings">
     <div ng-show="!showSettings">
       <span ng-click="showSettings = !showSettings">settings</span>
     </div>
     <div ng-show="showSettings">
-      player:
-      <select ng-model="playerColor">
-        <option value="lightgreen">green</option>
-        <option value="pink">red</option>
-        <option value="lightyellow">yellow</option>
-        <option value="lightblue">blue</option>
-        <option value="white">white</option>
-        <option value="lightgray">black</option>
+      num players:
+      <select ng-model="numPlayers" convert-to-number>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
       </select>
+      <br/>
+
+      <div ng-repeat="player in players">
+        player {{$index + 1}}:
+        <select ng-model="player.color" ng-options="css as human for (css, human) in colors"></select>
+      </div>
       <div ng-click="showSettings = !showSettings">hide settings</div>
     </div>
   </div>
 
-  <div>
-    home city:
-    <select ng-model="home" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-    <span ng-show="homeRegion !== undefined">({{regions[homeRegion]}})</span>
-  </div>
-
-  <div class="region-selector" ng-show="showRegionPicker">
-    <p>Since you were already in {{data.regions[origRegion]}}, you may pick any region for your next destination!</p>
-    <button ng-repeat="region in regions" ng-click="randomCityInRegion($index)">{{region}}</button>
-  </div>
-
-  <div ng-hide="showRegionPicker">
+  <div class="centered" ng-repeat="player in players" ng-style="{background_color: player.color}">
     <div>
-      origin:
-      <select ng-model="orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-      <span ng-show="origRegion !== undefined">({{regions[origRegion]}})</span>
-    </div>
-    <div>
-      destination:
-      <select ng-model="dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
-      <span ng-show="destRegion !== undefined">({{regions[destRegion]}})</span>
-    </div>
-    <div class="payoff" ng-hide="orig==dest">
-      payoff: {{payoff}}
+      home city:
+      <select ng-model="player.home" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+      <span ng-show="homeRegion !== undefined">({{regions[player.homeRegion]}})</span>
     </div>
 
-    <div class="warnings">
-        <div ng-show="orig==dest && orig >= 0">
-          Same city rolled... loose turn. :/
-        </div>
+    <div class="region-selector" ng-show="player.showRegionPicker">
+      <p>Since you were already in {{data.regions[player.origRegion]}}, you may pick any region for your next destination!</p>
+      <button ng-repeat="region in regions" ng-click="nextDest(player, $index)">{{region}}</button>
     </div>
 
-    <div class="roller">
-      <button ng-click="nextDest()">next destination!</button>
+    <div ng-hide="player.showRegionPicker">
+      <div>
+        origin:
+        <select ng-model="player.orig" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+        <span ng-show="player.origRegion !== undefined">({{regions[player.origRegion]}})</span>
+      </div>
+      <div>
+        destination:
+        <select ng-model="player.dest" ng-options="convertToInt(idx) as city for (idx, city) in cities"></select>
+        <span ng-show="player.destRegion !== undefined">({{regions[player.destRegion]}})</span>
+      </div>
+      <div class="payoff">
+        payoff: {{player.payoff}}
+      </div>
+
+      <div class="warnings">
+          <div ng-show="player.orig==player.dest && player.orig >= 0">
+            Same city rolled... loose turn. :/
+          </div>
+      </div>
+
+      <div class="roller">
+        <button ng-click="nextDest(player)">next destination!</button>
+      </div>
     </div>
   </div>
 </body>
