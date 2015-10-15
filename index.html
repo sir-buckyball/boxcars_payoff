@@ -505,14 +505,7 @@ div {
       $location.search("map", map);
     });
 
-    /**
-     * Watch for player city changes.
-     */
-    $scope.$watch("players", function(players) {
-      $scope.updatePlayers();
-    }, true);
-
-    $scope.updatePlayers = function(players) {
+    $scope.updatePlayers = function() {
       // Update regions and payoffs.
       for (var i = 0; i < $scope.numPlayers; i++) {
         var player = $scope.players[i];
@@ -532,11 +525,9 @@ div {
     };
 
     /**
-     * Watch for numPlayers changes.
+     * Watch for player city changes.
      */
-    $scope.$watch("numPlayers", function(numPlayers) {
-      $scope.updateNumPlayers();
-    });
+    $scope.$watch("players", $scope.updatePlayers, true);
 
     $scope.updateNumPlayers = function() {
       var numPlayers = ($scope.numPlayers === undefined) ? 1 : +$scope.numPlayers;
@@ -562,7 +553,13 @@ div {
     };
 
     /**
-     * Human name --> CSS name
+     * Watch for numPlayers changes.
+     */
+    $scope.$watch("numPlayers", $scope.updateNumPlayers);
+
+    /**
+     * A map from the particular CSS color identifiers we want to use
+     * to the color names we want to display them as.
      */
     $scope.colors = {
       "lightgreen": "green",
@@ -644,23 +641,6 @@ div {
       $scope.updateNumPlayers();
     };
     doInit();
-  });
-
-  /**
-   * Allow representing models directly as numbers, not strings.
-   */
-  app.directive('convertToNumber', function() {
-    return {
-      require: 'ngModel',
-      link: function(scope, element, attrs, ngModel) {
-        ngModel.$parsers.push(function(val) {
-          return parseInt(val, 10);
-        });
-        ngModel.$formatters.push(function(val) {
-          return '' + val;
-        });
-      }
-    };
   });
   </script>
 </head>
